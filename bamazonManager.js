@@ -20,9 +20,6 @@ var inquirer = require("inquirer");
 // Require table for displaying table data in a nice layout
 var formattable = require("table");
 
-// Global variable to store the data
-var data = [];
-
 // User choice for item id
 var intChoice = 0;
 
@@ -33,18 +30,15 @@ function displayProductTable() {
             throw err;
         }
 
-        // Empty the array
-        data.length = 0;
+        // Variable to store the data
+        var data = [];
 
         // Create header row
         data.push(["--- Item Id ---", "--- Product Name ---", "--- Price ---", "--- Stock ---"]);
 
         // Loop through the results and append to the data array
         for (var i = 0; i < res.length; i++) {
-            // Only display products that can be purchased
-            if (parseInt(res[i].stock_quantity) > 0){
-                data.push([res[i].item_id, res[i].product_name, res[i].price.toFixed(2), res[i].stock_quantity]);
-            }
+            data.push([res[i].item_id, res[i].product_name, res[i].price.toFixed(2), res[i].stock_quantity]);
         }
 
         // Output the data in a nicely formatted layout
@@ -57,40 +51,24 @@ function displayProductTable() {
 // Prompt the user to enter an item id
 function userPrompt() {
     inquirer.prompt({
-        type: "input",
+        type: "list",
         name: "userChoice",
-        message: "Please enter an item id to purchase:"
+        message: "What would you like to do?",
+        choices: ["View Products for Sale", "View Low Inventory", "Add to Inventory", "Add New Product", "Exit"]
     }).then(function (user) {
-        intChoice = parseInt(user.userChoice);
+        choice = user.userChoice;
 
-        // User didn't enter a number.
-        if (isNaN(intChoice)) {
-            console.log("You need to enter a number.");
-            displayProductTable();
-        } else {
-            var isFound = false;
-            var itemPrice = 0.00;
-            var stockQuantity = 0;
-
-            // Loop through the data array and get the item user wants to purchase.
-            for (var i = 1; i < data.length; i++) {
-                if (intChoice == data[i][0]) {
-                    isFound = true;
-                    itemPrice = parseFloat(data[i][2]).toFixed(2);
-                    stockQuantity = parseInt(data[i][3]);
-                    break;
-                }
-            }
-
-            // User entered an item id not in the database.
-            if (!isFound) {
-                console.log("The item id you entered does not exist or there is no stock. Please enter an existing item id.");
+        // What did the manager select?
+        switch (choice) {
+            case "View Products for Sale":
                 displayProductTable();
-            } else {
-
-                // User entered a valid item, proceed to quantity.
-                productQuantity(itemPrice, stockQuantity);
-            }
+                break;
+            case "Exit":
+                exitProgram();
+                break;
+            default:
+                console.log("Invalid Selection");
+                userPrompt();
         }
     })
 }
@@ -158,8 +136,9 @@ function showPurchaseResults(price, quantity) {
 
 // Exit the program
 function exitProgram() {
+    console.log("Thank you! Exiting now...")
     connection.end();
 }
 
 // Display product information to the user
-displayProductTable();
+userPrompt();
