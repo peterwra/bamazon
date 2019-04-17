@@ -11,7 +11,7 @@ connection.connect(function (err) {
     if (err) {
         throw err;
     }
-    console.log("Connection id: " + connection.threadId);
+    // console.log("Connection id: " + connection.threadId);
 })
 
 // Require inquirer
@@ -26,22 +26,22 @@ function displayProductTable() {
     var data = [];
 
     // Header row
-    data.push(["--- Item Id ---", "--- Product Name ---", "--- Price ---", "--- Stock ---"]);
+    data.push(["--- Item Id ---", "--- Product Name ---", "--- Department ---", "--- Price ---", "--- Stock ---"]);
 
     // Fill the data array from the database
-    connection.query("SELECT item_id, product_name, price, stock_quantity FROM PRODUCTS", function (err, res) {
+    connection.query("SELECT item_id, product_name, department_name, price, stock_quantity FROM PRODUCTS", function (err, res) {
         if (err) {
             throw err;
         }
 
         // Loop through the results and append to the data array
         for (var i = 0; i < res.length; i++) {
-            data.push([res[i].item_id, res[i].product_name, res[i].price.toFixed(2), res[i].stock_quantity]);
+            data.push([res[i].item_id, res[i].product_name, res[i].department_name, res[i].price.toFixed(2), res[i].stock_quantity]);
         }
 
         // Output the data in a nicely formatted layout
         var output = formattable.table(data);
-        console.log("\n"+output+"\n");
+        console.log("\n" + output + "\n");
         userPrompt();
     })
 }
@@ -51,7 +51,7 @@ function lowInventory() {
     var data = [];
 
     // Fill the data array from the database
-    connection.query("SELECT item_id, product_name, price, stock_quantity FROM PRODUCTS WHERE stock_quantity<5", function (err, res) {
+    connection.query("SELECT item_id, product_name, department_name, price, stock_quantity FROM PRODUCTS WHERE stock_quantity<5", function (err, res) {
         if (err) {
             throw err;
         }
@@ -59,16 +59,16 @@ function lowInventory() {
         // Check if we have low inventory
         if (res.length > 0) {
             // Header row
-            data.push(["--- Item Id ---", "--- Product Name ---", "--- Price ---", "--- Stock ---"]);
+            data.push(["--- Item Id ---", "--- Product Name ---", "--- Department ---", "--- Price ---", "--- Stock ---"]);
 
             // Loop through the results and append to the data array
             for (var i = 0; i < res.length; i++) {
-                data.push([res[i].item_id, res[i].product_name, res[i].price.toFixed(2), res[i].stock_quantity]);
+                data.push([res[i].item_id, res[i].product_name, res[i].department_name, res[i].price.toFixed(2), res[i].stock_quantity]);
             }
 
             // Output the data in a nicely formatted layout
             var output = formattable.table(data);
-            console.log("\n"+output+"\n");
+            console.log("\n" + output + "\n");
 
         } else {
             console.log("\nNo low inventory!\n");
@@ -99,6 +99,9 @@ function userPrompt() {
             case "Add to Inventory":
                 addInventory();
                 break;
+            case "Add New Product":
+                addNewProduct();
+                break;
             case "Exit":
                 exitProgram();
                 break;
@@ -113,14 +116,14 @@ function userPrompt() {
 function addInventory() {
     // Populate data array
     var data = [];
-    connection.query("SELECT item_id, product_name, price, stock_quantity FROM PRODUCTS", function (err, res) {
+    connection.query("SELECT item_id, product_name, department_name, price, stock_quantity FROM PRODUCTS", function (err, res) {
         if (err) {
             throw err;
         }
 
         // Loop through the results and append to the data array
         for (var i = 0; i < res.length; i++) {
-            data.push([res[i].item_id, res[i].product_name, res[i].price.toFixed(2), res[i].stock_quantity]);
+            data.push([res[i].item_id, res[i].product_name, res[i].department_name, res[i].price.toFixed(2), res[i].stock_quantity]);
         }
     })
 
@@ -138,10 +141,10 @@ function addInventory() {
         } else {
             // If the item number doesn't exist, display alert.
             var isFound = false;
-            for (var i = 1; i < data.length; i++) {
+            for (var i = 0; i < data.length; i++) {
                 if (itemId == data[i][0]) {
                     isFound = true;
-                    stockQuantity = parseInt(data[i][3]);
+                    stockQuantity = parseInt(data[i][4]);
                     break;
                 }
             }
@@ -155,6 +158,60 @@ function addInventory() {
                 // User entered a valid item, proceed to quantity.
                 updateStock(itemId, stockQuantity);
             }
+        }
+    })
+}
+
+// Add a new item to the store
+function addNewProduct() {
+    inquirer.prompt(
+        [
+            {
+                type: "input",
+                name: "productName",
+                message: "Please enter the name of the new product:"
+            },
+            {
+                type: "input",
+                name: "productDepartment",
+                message: "Please enter the department of the new product:"
+            },
+            {
+                type: "input",
+                name: "productPrice",
+                message: "Please enter the price of the new product:"
+            },
+            {
+                type: "input",
+                name: "productQuantity",
+                message: "Please enter the initial stock:"
+            }
+        ]
+    ).then(function (user) {
+        var pName = user.productName;
+        var pDepartment = user.productDepartment;
+        var pPrice = parseFloat(user.productPrice).toFixed(2);
+        var pQuantity = parseInt(user.productQuantity);
+        if (isNaN(pPrice)) {
+            console.log("\nThe price of the product needs to be a number.\n");
+            addNewProduct();
+        } else if (isNaN(pQuantity)) {
+            console.log("\nThe initial quantity needs to be a number.\n");
+            addNewProduct();
+        } else {
+            connection.query(
+                "INSERT INTO products SET ?",
+                {
+                    product_name: pName,
+                    department_name: pDepartment,
+                    price: pPrice,
+                    stock_quantity: pQuantity
+                },
+                function (err, res) {
+                    console.log("\n" + res.affectedRows + " product created!\n");
+                    userPrompt();
+                }
+            );
         }
     })
 }
