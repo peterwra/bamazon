@@ -112,7 +112,7 @@ function productQuantity(price, quantity) {
             // Verify the user entered a valid quantity greater than 0
             if (userQuantity <= 0) {
                 console.log("Please enter a quantity greater than 0.");
-                productQuantity();
+                productQuantity(price, quantity);
             } else {
                 // Cannot buy if there is not enough stock on hand.
                 if (userQuantity > quantity) {
